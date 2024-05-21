@@ -81,13 +81,32 @@ public class GlobalExceptionHandler {
 	        String responseBody = "{\"error\": " 
 	        		  + "{\"statusCode\": 404, " 
 	  				+ "\"name\": \"Error\", "
-	  				+ "\"message\": \"DL Number not found "
+	  				+ "\"message\": \"DL Number not found \","
 	  				+ "\"status\": 404}}";
 	        		
 	        // Return the custom response with HTTP status code 400
 	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(responseBody);
 	    }
 	
+	 
+	 @ExceptionHandler(Upstreamerrorexception.class)
+	    public ResponseEntity<Object> handleUpstreamerrorexception(Upstreamerrorexception ex) {
+	        // Create a custom response body
+		 String responseBody = "{\"error\": {"
+                 + "\"reason\": \"Error From Upstream\", "
+                 + "\"status\": 409, "
+                 + "\"message\": \"Upstream Down\", "
+                 + "\"type\": \"Conflict\", "
+                 + "\"statusCode\": 409, "
+                 + "\"name\": \"error\""
+                 + "}}";
+
+	        		
+	        // Return the custom response with HTTP status code 400
+	        return ResponseEntity.status(HttpStatus.CONFLICT).body(responseBody);
+	    }
+	
+
 	 
 	 
 	 
