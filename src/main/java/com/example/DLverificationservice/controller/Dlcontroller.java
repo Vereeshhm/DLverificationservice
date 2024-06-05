@@ -11,6 +11,9 @@ import com.example.DLverificationservice.Entity.Dlrequest;
 //import com.example.DLverificationservice.Response.DLResponse;
 import com.example.DLverificationservice.Service.DLService;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 @RestController
 public class Dlcontroller {
 
@@ -18,14 +21,15 @@ public class Dlcontroller {
 	DLService dlService;
 
 	@PostMapping("api/DL/Verification")
-	public Object Verification(@RequestBody Dlrequest request) {
+	public String Verification(@RequestBody Dlrequest request, HttpServletRequest request1, HttpServletResponse response) {
 
-		return ResponseEntity.ok().body(dlService.getVerfication(request));
+		return dlService.getVerfication(request,request1,response);
 	}
 
 	@PostMapping("api/DL/numberbased")
-	public Object fetchdetails(@RequestBody DLnumberdto dto) {
-		return ResponseEntity.ok().body(dlService.getFetchDetails(dto));
+	public String fetchdetails(@RequestBody DLnumberdto dto, HttpServletRequest request, HttpServletResponse response) {
+		
+		return dlService.getFetchDetails(dto,  request,  response);
 	}
 
 }
