@@ -1,6 +1,7 @@
 package com.example.DLverificationservice.Logentities;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 import org.hibernate.annotations.Type;
 
@@ -73,5 +74,10 @@ public class ApiLogentity {
 		this.timestamp = timestamp;
 	}
 	
-	
+	public ApiLogentity() {
+		this.timestamp=LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+	}
+	public void setResponseBodyAsJson(String message) {
+		this.responseBody = "{\"message\": \"" + message.replace("\"", "\\\"") + "\"}";
+	}
 }

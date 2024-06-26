@@ -14,23 +14,12 @@ import org.springframework.web.client.RestTemplate;
 
 import com.example.DLverificationservice.Entity.DLnumberdto;
 import com.example.DLverificationservice.Entity.Dlrequest;
-import com.example.DLverificationservice.Exception.Dlnotfoundexception;
-import com.example.DLverificationservice.Exception.Emptydobexception;
-import com.example.DLverificationservice.Exception.Emptyissuedateexception;
-import com.example.DLverificationservice.Exception.InvalidDlNumberException;
-import com.example.DLverificationservice.Exception.InvalidDobException;
-import com.example.DLverificationservice.Exception.InvalidIssuedateException;
 import com.example.DLverificationservice.Logentities.ApiLog;
 import com.example.DLverificationservice.Logentities.ApiLogentity;
 import com.example.DLverificationservice.Repository.ApiLogRepository;
 import com.example.DLverificationservice.Repository.ApiLogRepository1;
 import com.example.DLverificationservice.Service.DLService;
 import com.example.DLverificationservice.Utils.Propertiesconfig;
-import com.example.DLverificationservice.exception1.DLNotfoundexceptionn;
-import com.example.DLverificationservice.exception1.InvalidDOBexception;
-import com.example.DLverificationservice.exception1.InvalidDlnumberexception;
-import com.example.DLverificationservice.exception1.InvalidDobformatException;
-import com.example.DLverificationservice.exception1.UpstreamErrorException;
 import com.google.gson.Gson;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -42,10 +31,10 @@ public class DLServiceImpl implements DLService {
 	private final RestTemplate restTemplate;
 
 	private final String apiKey;
-	
+
 	@Autowired
 	ApiLogRepository apiLogRepository;
-	
+
 	@Autowired
 	ApiLogRepository1 apiLogRepository1;
 
@@ -63,161 +52,138 @@ public class DLServiceImpl implements DLService {
 	@Override
 	public String getVerfication(Dlrequest request, HttpServletRequest request1, HttpServletResponse response) {
 
-
-		String APIURL = propertiesconfig.getDLVURL();
-		
-		String requestUrl = request1.getRequestURI().toString();
-
-		int statusCode = response.getStatus();
-
-		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_JSON);
-		headers.set("Authorization", apiKey); // Include API key directly without "Bearer" prefix
-		String requestBody = "{\"number\": \"" + request.getNumber() + "\", \"dob\": \"" + request.getDob()
-				+ "\", \"issueDate\": \"" + request.getIssueDate() + "\"}";
-		
-		Gson gson = new Gson();
-
-		String requestBodyJson = gson.toJson(request);
-
-		HttpEntity<String> request2 = new HttpEntity<>(requestBodyJson, headers);
-
-		System.out.println("Requestbody  " + requestBody);
-		ApiLog apiLog=new ApiLog();
-		apiLog.setUrl(requestUrl);
-		apiLog.setRequestBody(requestBodyJson);
-		
-
-
+		ApiLog apiLog = new ApiLog();
+		String response1 = null;
 		try {
-			String response1 = restTemplate.postForObject(APIURL, request2, String.class);
+			String APIURL = propertiesconfig.getDLVURL();
+
+			String requestUrl = request1.getRequestURI().toString();
+
+			HttpHeaders headers = new HttpHeaders();
+			headers.setContentType(MediaType.APPLICATION_JSON);
+			headers.set("Authorization", apiKey); // Include API key directly without "Bearer" prefix
+			String requestBody = "{\"number\": \"" + request.getNumber() + "\", \"dob\": \"" + request.getDob()
+					+ "\", \"issueDate\": \"" + request.getIssueDate() + "\"}";
+
+			Gson gson = new Gson();
+
+			String requestBodyJson = gson.toJson(request);
+
+			HttpEntity<String> request2 = new HttpEntity<>(requestBodyJson, headers);
+
+			System.out.println("Requestbody  " + requestBody);
+
+			apiLog.setUrl(requestUrl);
+			apiLog.setRequestBody(requestBodyJson);
+
+			response1 = restTemplate.postForObject(APIURL, request2, String.class);
 			apiLog.setResponseBody(response1);
 			apiLog.setStatusCode(HttpStatus.OK.value());
 			return response1;
-		} catch (HttpClientErrorException.BadRequest e) {
-			String errorMessage = e.getResponseBodyAsString();
-			apiLog.setResponseBody(errorMessage);
-			apiLog.setStatusCode(e.getStatusCode().value());
-			// System.out.println("Error Response: " + errorMessage);
-			logger.error("Error Response: {}", errorMessage);
-			if (errorMessage.contains("Please provide a valid Driving License Number")) {
-				throw new InvalidDlNumberException("Please provide a valid Driving License Number");
-			} else if (errorMessage
-					.contains("Please ensure the issueDate is entered in the correct format: DD/MM/YYYY\"")) {
-				throw new InvalidIssuedateException(
-						"Please ensure the issueDate is entered in the correct format: DD/MM/YYYY\"");
-			} else if (errorMessage.contains("Please ensure the dob is entered in the correct format: DD/MM/YYYY\"")) {
-				throw new InvalidDobException("Please ensure the dob is entered in the correct format: DD/MM/YYYY\"");
-			} else if (errorMessage.contains("Please provide a valid dob with format: DD/MM/YYYY")) {
-				throw new Emptydobexception("Please provide a valid dob with format: DD/MM/YYYY");
-			} else if (errorMessage.contains("Please provide a valid issueDate with format: DD/MM/YYYY\"")) {
-				throw new Emptyissuedateexception("Please provide a valid issueDate with format: DD/MM/YYYY\"");
-			}
-
-			else {
-
-				throw e;
-			}
-
-		} catch (HttpClientErrorException.NotFound e) {
-			String errorMessage = e.getResponseBodyAsString();
-			
-			apiLog.setResponseBody(errorMessage);
-			apiLog.setStatusCode(e.getStatusCode().value());
-			logger.error("Error Response: {}", errorMessage);
-			if (errorMessage.contains("DL Number not found")) {
-				throw new Dlnotfoundexception("DL Number not found");
-			} else {
-				throw e;
-			}
 		}
 
-		catch (HttpClientErrorException.Conflict e) {
-			String errorMessage = e.getResponseBodyAsString();
-			apiLog.setResponseBody(errorMessage);
-			apiLog.setStatusCode(e.getStatusCode().value());
-			logger.error("Error Response: {}", errorMessage);
-			if (errorMessage.contains("Upstream Down")) {
-				throw new Dlnotfoundexception("Upstream Down");
-			} else {
-				throw e;
-			}
+		catch (HttpClientErrorException.TooManyRequests e) {
+			// Handling Too Many Requests Exception specifically
+			apiLog.setStatusCode(HttpStatus.TOO_MANY_REQUESTS.value());
+
+			response1 = e.getResponseBodyAsString();
+			System.out.println(response1 + "Response");
+			apiLog.setResponseBodyAsJson("API rate limit exceeded");
+		} catch (HttpClientErrorException.Unauthorized e) {
+			// Handling Unauthorized Exception specifically
+			apiLog.setStatusCode(HttpStatus.UNAUTHORIZED.value());
+
+			response1 = e.getResponseBodyAsString();
+			System.out.println(response1 + "Response");
+			apiLog.setResponseBodyAsJson("No API key found in request");
+
 		}
-		finally {
+
+		catch (HttpClientErrorException e) {
+			apiLog.setStatusCode(e.getStatusCode().value());
+
+			response1 = e.getResponseBodyAsString();
+			System.out.println(response1 + " Response ");
+			apiLog.setResponseBody(response1);
+		}
+
+		catch (Exception e) {
+			apiLog.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+
+			response1 = e.getMessage();
+			apiLog.setResponseBody(response1);
+		} finally {
 			apiLogRepository.save(apiLog);
 		}
+		return response1;
 	}
 
 	@Override
 	public String getFetchDetails(DLnumberdto dto, HttpServletRequest request, HttpServletResponse response) {
-		String APIURL = propertiesconfig.getDLNURL();
-		
-		String requestUrl = request.getRequestURI().toString();
 
-		int statusCode = response.getStatus();
-
-
-		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_JSON);
-		headers.set("Authorization", apiKey); // Include API key directly without "Bearer" prefix
-		String requestBody = "{\"number\": \"" + dto.getNumber() + "\", \"dob\": \"" + dto.getDob() + "\"}";
-
-		Gson gson = new Gson();
-
-		String requestBodyJson = gson.toJson(dto);
-
-		
-		HttpEntity<String> request1 = new HttpEntity<>(requestBodyJson, headers);
-
-		System.out.println("Requestbody  " + requestBody);
-		
-		ApiLogentity apiLogentity=new ApiLogentity();
-		apiLogentity.setUrl(requestUrl);
-		apiLogentity.setRequestBody(requestBodyJson);
-
-
+		ApiLogentity apiLogentity = new ApiLogentity();
+		String response1 = null;
 		try {
-			String response1 = restTemplate.postForObject(APIURL, request1, String.class);
+			String APIURL = propertiesconfig.getDLNURL();
+
+			String requestUrl = request.getRequestURI().toString();
+
+			HttpHeaders headers = new HttpHeaders();
+			headers.setContentType(MediaType.APPLICATION_JSON);
+			headers.set("Authorization", apiKey); // Include API key directly without "Bearer" prefix
+			String requestBody = "{\"number\": \"" + dto.getNumber() + "\", \"dob\": \"" + dto.getDob() + "\"}";
+
+			Gson gson = new Gson();
+
+			String requestBodyJson = gson.toJson(dto);
+
+			HttpEntity<String> request1 = new HttpEntity<>(requestBodyJson, headers);
+
+			System.out.println("Requestbody  " + requestBody);
+
+			apiLogentity.setUrl(requestUrl);
+			apiLogentity.setRequestBody(requestBodyJson);
+
+			response1 = restTemplate.postForObject(APIURL, request1, String.class);
 			apiLogentity.setResponseBody(response1);
 			apiLogentity.setStatusCode(HttpStatus.OK.value());
 			return response1;
-		} catch (HttpClientErrorException.BadRequest e) {
-			String errorMessage = e.getResponseBodyAsString();
-			apiLogentity.setResponseBody(errorMessage);
-			apiLogentity.setStatusCode(e.getStatusCode().value());
-			// System.out.println("Error Response: " + errorMessage);
-			logger.error("Error Response: {}", errorMessage);
-			if (errorMessage.contains("Please enter the DOB in proper format dd/mm/yyyy")) {
-				throw new InvalidDobformatException("Please enter the DOB in proper format dd/mm/yyyy");
-			} else if (errorMessage.contains("Please provide a valid dob with format: DD/MM/YYYY")) {
-				throw new InvalidDOBexception("Please provide a valid dob with format: DD/MM/YYYY");
-			} else if (errorMessage.contains("Please provide a valid Driving License Number")) {
-				throw new InvalidDlnumberexception("Please provide a valid Driving License Number");
-			}
+		} catch (HttpClientErrorException.TooManyRequests e) {
+			// Handling Too Many Requests Exception specifically
+			apiLogentity.setStatusCode(HttpStatus.TOO_MANY_REQUESTS.value());
 
-			else {
-				throw e;
-			}
+			response1 = e.getResponseBodyAsString();
+			System.out.println(response1 + "Response");
+			apiLogentity.setResponseBodyAsJson("API rate limit exceeded");
+		} catch (HttpClientErrorException.Unauthorized e) {
+			// Handling Unauthorized Exception specifically
+			apiLogentity.setStatusCode(HttpStatus.UNAUTHORIZED.value());
+
+			response1 = e.getResponseBodyAsString();
+			System.out.println(response1 + "Response");
+			apiLogentity.setResponseBodyAsJson("No API key found in request");
+
 		}
 
-		catch (HttpClientErrorException.NotFound e) {
-			String errorMessage = e.getResponseBodyAsString();
-			apiLogentity.setResponseBody(errorMessage);
+		catch (HttpClientErrorException e) {
 			apiLogentity.setStatusCode(e.getStatusCode().value());
-			logger.error("Error Response: {}", errorMessage);
-			if (errorMessage.contains("DL Number not found")) {
-				throw new DLNotfoundexceptionn("DL Number not found");
-			} else if (errorMessage.contains("Upstream Down")) {
-				throw new UpstreamErrorException("Upstream Down");
-			}
 
-			else {
-				throw e;
-			}
+			response1 = e.getResponseBodyAsString();
+			System.out.println(response1 + " Response ");
+			apiLogentity.setResponseBody(response1);
 		}
+
+		catch (Exception e) {
+			apiLogentity.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+
+			response1 = e.getMessage();
+			apiLogentity.setResponseBody(response1);
+		}
+
 		finally {
 			apiLogRepository1.save(apiLogentity);
 		}
+		return response1;
 
 	}
 
